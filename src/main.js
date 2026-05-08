@@ -128,9 +128,8 @@ const dustCount = 1500;
 const dustField = makeDustField(dustCount, 80);
 scene.add(dustField);
 
-/* ----- Controls ----- */
+/* ----- Controls (PointerLockControls rotates the camera in place) ----- */
 const controls = new PointerLockControls(camera, renderer.domElement);
-scene.add(controls.object);
 
 /* ----- Player state ----- */
 const player = {
@@ -340,7 +339,7 @@ loader.load(
     // Spawn player above the model and let gravity drop them onto it.
     const spawnY = finalBounds.max.y + 5;
     player.spawn.set(0, spawnY, 0);
-    controls.object.position.copy(player.spawn);
+    camera.position.copy(player.spawn);
 
     finishLoading();
   },
@@ -388,7 +387,7 @@ function finishLoading() {
 }
 
 function respawn() {
-  controls.object.position.copy(player.spawn);
+  camera.position.copy(player.spawn);
   player.velocity.set(0, 0, 0);
 }
 
@@ -461,22 +460,22 @@ function updateMovement(dt) {
   }
 
   // Step horizontal collision: prevent walking through walls.
-  const nextPos = controls.object.position.clone();
+  const nextPos = camera.position.clone();
   nextPos.x += player.velocity.x * dt;
   nextPos.z += player.velocity.z * dt;
-  resolveHorizontalCollisions(nextPos, controls.object.position);
+  resolveHorizontalCollisions(nextPos, camera.position);
 
   // Apply vertical velocity (we'll resolve ground after).
   nextPos.y += player.velocity.y * dt;
 
-  controls.object.position.copy(nextPos);
+  camera.position.copy(nextPos);
 
   if (!player.flying) {
     resolveGround();
   }
 
   // Prevent falling forever — respawn if we drop too far.
-  if (controls.object.position.y < -200) {
+  if (camera.position.y < -200) {
     respawn();
   }
 }
@@ -507,7 +506,7 @@ function resolveHorizontalCollisions(nextPos, currentPos) {
 
 function resolveGround() {
   if (collidableMeshes.length === 0) return;
-  const origin = controls.object.position.clone();
+  const origin = camera.position.clone();
   origin.y += 0.5; // start a bit above the camera position to avoid origin-inside-mesh
   downRaycaster.set(origin, tmpDown);
   const hits = downRaycaster.intersectObjects(collidableMeshes, false);
@@ -519,8 +518,8 @@ function resolveGround() {
   const groundY = hit.point.y;
   const desiredY = groundY + PLAYER.eyeHeight;
 
-  if (controls.object.position.y <= desiredY) {
-    controls.object.position.y = desiredY;
+  if (camera.position.y <= desiredY) {
+    camera.position.y = desiredY;
     if (player.velocity.y < 0) player.velocity.y = 0;
     player.onGround = true;
   } else {
@@ -568,7 +567,7 @@ function updateDustField(dt, t) {
   const positions = dustField.geometry.attributes.position;
   const seeds = dustField.geometry.attributes.seed;
   const radius = dustField.geometry.userData.radius;
-  const player = controls.object.position;
+  const eye = camera.position;
   for (let i = 0; i < positions.count; i++) {
     const idx = i * 3;
     let x = positions.array[idx];
@@ -581,14 +580,14 @@ function updateDustField(dt, t) {
     y += Math.sin(t * 0.3 + seed * 6.28) * 0.0025;
 
     // Wrap relative to the player so dust always surrounds them.
-    const dx = x - player.x;
-    const dz = z - player.z;
+    const dx = x - eye.x;
+    const dz = z - eye.z;
     if (dx > radius) x -= radius * 2;
     if (dx < -radius) x += radius * 2;
     if (dz > radius) z -= radius * 2;
     if (dz < -radius) z += radius * 2;
-    if (y - player.y > radius * 0.6) y -= radius * 0.8;
-    if (y - player.y < -radius * 0.4) y += radius * 0.8;
+    if (y - eye.y > radius * 0.6) y -= radius * 0.8;
+    if (y - eye.y < -radius * 0.4) y += radius * 0.8;
 
     positions.array[idx] = x;
     positions.array[idx + 1] = y;
@@ -629,17 +628,17 @@ function tick() {
 
   // Track sun with player so shadows stay near the camera.
   sun.position.set(
-    controls.object.position.x + 80,
-    controls.object.position.y + 120,
-    controls.object.position.z + 60,
+    camera.position.x + 80,
+    camera.position.y + 120,
+    camera.position.z + 60,
   );
-  sun.target.position.copy(controls.object.position);
+  sun.target.position.copy(camera.position);
 
   // HUD
   if (controls.isLocked) {
     const speed = Math.hypot(player.velocity.x, player.velocity.z);
     hudSpeed.textContent = `${speed.toFixed(1)} m/s`;
-    const p = controls.object.position;
+    const p = camera.position;
     hudPos.textContent = `${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}`;
   }
 

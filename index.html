@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23121417'/%3E%3Cpath d='M12 44 L24 24 L32 36 L42 18 L52 44 Z' fill='%23ff6b3d'/%3E%3Ccircle cx='46' cy='16' r='4' fill='%23ffd166'/%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0b0d10" />
+    <title>Dreamwalk — Apocalyptic City</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <div id="overlay" class="overlay">
+      <div class="overlay__panel">
+        <div class="overlay__brand">DREAMWALK</div>
+        <h1 class="overlay__title">Apocalyptic City</h1>
+        <p class="overlay__subtitle">A first-person dream you can wander.</p>
+
+        <div id="loader" class="loader">
+          <div class="loader__bar"><div id="loader-fill" class="loader__fill"></div></div>
+          <div id="loader-text" class="loader__text">Loading the dream… 0%</div>
+        </div>
+
+        <button id="start-btn" class="overlay__cta" disabled>
+          <span class="overlay__cta-label">Loading…</span>
+        </button>
+
+        <div class="overlay__controls">
+          <div class="overlay__controls-row"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move</span></div>
+          <div class="overlay__controls-row"><kbd>Mouse</kbd><span>Look around</span></div>
+          <div class="overlay__controls-row"><kbd>Space</kbd><span>Jump</span></div>
+          <div class="overlay__controls-row"><kbd>Shift</kbd><span>Sprint</span></div>
+          <div class="overlay__controls-row"><kbd>F</kbd><span>Toggle flight</span></div>
+          <div class="overlay__controls-row"><kbd>Esc</kbd><span>Release cursor</span></div>
+        </div>
+
+        <p class="overlay__hint" id="overlay-hint">Click <em>Begin Dream</em> to enter — your cursor will lock to the world.</p>
+      </div>
+    </div>
+
+    <div id="hud" class="hud" aria-hidden="true">
+      <div class="hud__crosshair"></div>
+      <div class="hud__info">
+        <div class="hud__row"><span class="hud__label">Mode</span><span id="hud-mode" class="hud__value">walking</span></div>
+        <div class="hud__row"><span class="hud__label">Speed</span><span id="hud-speed" class="hud__value">0.0 m/s</span></div>
+        <div class="hud__row"><span class="hud__label">Pos</span><span id="hud-pos" class="hud__value">0, 0, 0</span></div>
+      </div>
+      <div class="hud__hint">Esc to release cursor</div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

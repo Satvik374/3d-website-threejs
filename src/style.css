@@ -1,0 +1,308 @@
+:root {
+  --bg: #0b0d10;
+  --ink: #f3ede2;
+  --ink-dim: #b9b2a4;
+  --accent: #ff6b3d;
+  --accent-soft: rgba(255, 107, 61, 0.18);
+  --panel: rgba(14, 16, 20, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  --font-display: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: radial-gradient(ellipse at top, #1a1410 0%, #07090b 70%);
+  cursor: default;
+}
+
+body.is-playing #scene {
+  cursor: none;
+}
+
+/* ---------- Overlay (start screen) ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: radial-gradient(
+      ellipse at center,
+      rgba(11, 13, 16, 0.55) 0%,
+      rgba(11, 13, 16, 0.92) 75%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><rect width='4' height='4' fill='%230b0d10'/><circle cx='1' cy='1' r='0.5' fill='%23ffffff' fill-opacity='0.04'/></svg>");
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  transition: opacity 600ms ease, visibility 600ms ease;
+}
+
+.overlay.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.overlay__panel {
+  width: min(560px, 100%);
+  padding: 40px 36px 32px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.overlay__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-soft), transparent 55%);
+  pointer-events: none;
+}
+
+.overlay__brand {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.overlay__title {
+  font-size: clamp(28px, 4vw, 40px);
+  margin: 0 0 8px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.overlay__subtitle {
+  margin: 0 0 24px;
+  color: var(--ink-dim);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.loader {
+  margin-bottom: 20px;
+}
+
+.loader__bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.loader__fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #ffd166);
+  transition: width 200ms ease;
+}
+
+.loader__text {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+
+.overlay__cta {
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--accent);
+  color: #1a0e08;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, box-shadow 200ms ease;
+  position: relative;
+  z-index: 1;
+}
+
+.overlay__cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(255, 107, 61, 0.35);
+}
+
+.overlay__cta:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.overlay__cta:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-dim);
+  cursor: progress;
+}
+
+.overlay__controls {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.overlay__controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
+.overlay__controls-row span {
+  margin-left: 4px;
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+  min-width: 22px;
+  text-align: center;
+}
+
+.overlay__hint {
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.overlay__hint em {
+  font-style: normal;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- HUD ---------- */
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+body.is-playing .hud {
+  opacity: 1;
+}
+
+.hud__crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55);
+}
+
+.hud__info {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  background: rgba(8, 10, 12, 0.55);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  min-width: 180px;
+  backdrop-filter: blur(8px);
+}
+
+.hud__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  line-height: 1.6;
+}
+
+.hud__label {
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+}
+
+.hud__value {
+  color: var(--ink);
+}
+
+.hud__hint {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(8, 10, 12, 0.5);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  backdrop-filter: blur(6px);
+}
+
+@media (max-width: 600px) {
+  .overlay__panel {
+    padding: 28px 22px 24px;
+  }
+
+  .hud__info {
+    left: 12px;
+    bottom: 12px;
+    min-width: 150px;
+  }
+
+  .hud__hint {
+    right: 12px;
+    bottom: 12px;
+  }
+}

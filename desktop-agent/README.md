@@ -48,6 +48,34 @@ The agent looks for an OpenAI API key in this order:
 Vision and clicking both need this -- `codex exec` text-only fallback is not
 implemented in this build.
 
+### Choosing the model
+
+There's a model dropdown in the top-right of the chat window. It's
+**editable** -- pick a preset or type any model id you have access to (e.g.
+a fine-tuned model, `gpt-5` once it's on your account, etc). Press Enter or
+Tab away to apply. The change takes effect on your next message.
+
+Presets shown:
+
+- `gpt-4o`            (default - fast, vision-capable)
+- `gpt-4o-mini`       (cheap, vision-capable)
+- `gpt-4.1`
+- `gpt-4.1-mini`
+- `gpt-4-turbo`
+- `o4-mini`           (reasoning, vision-capable)
+
+> Only **vision-capable** models can do the "look at my screen" feature.
+> Non-vision models will still chat normally but will fail when the agent
+> tries to send a screenshot.
+
+You can also set the **default** model without touching the UI by exporting
+an environment variable before launching:
+
+```bat
+set AGENT_MODEL=gpt-4o-mini
+run.bat
+```
+
 ## Using it
 
 1. Start with `run.bat`.

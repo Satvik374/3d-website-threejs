@@ -95,6 +95,9 @@ class LLMClient:
     def reset(self) -> None:
         self.history = []
 
+    def set_model(self, model: str) -> None:
+        self.model = model
+
     def _build_messages(self) -> list[dict[str, Any]]:
         return [{"role": "system", "content": SYSTEM_PROMPT}, *self.history]
 

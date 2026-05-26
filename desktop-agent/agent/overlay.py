@@ -20,9 +20,18 @@ class ChatOverlay:
     """Small floating chat window. Methods that touch Tk must run on the Tk thread;
     `enqueue` is provided for cross-thread callers."""
 
-    def __init__(self, on_send: Callable[[str], None], on_reset: Callable[[], None]):
+    def __init__(
+        self,
+        on_send: Callable[[str], None],
+        on_reset: Callable[[], None],
+        on_model_change: Callable[[str], None] | None = None,
+        models: list[str] | None = None,
+        current_model: str = "gpt-4o",
+    ):
         self.on_send = on_send
         self.on_reset = on_reset
+        self.on_model_change = on_model_change or (lambda _m: None)
+        self._models = models or ["gpt-4o"]
         self._queue: queue.Queue = queue.Queue()
         self._visible = False
 
@@ -38,9 +47,9 @@ class ChatOverlay:
         self.root.geometry(f"{w}x{h}+{sw - w - 24}+{sh - h - 80}")
         self.root.minsize(320, 400)
 
-        # Header
+        # Header (title + model selector)
         header = tk.Frame(self.root, bg=BG)
-        header.pack(fill="x", padx=10, pady=(8, 4))
+        header.pack(fill="x", padx=10, pady=(8, 0))
         tk.Label(
             header,
             text="Desktop Agent",
@@ -48,8 +57,41 @@ class ChatOverlay:
             fg=FG,
             font=("Segoe UI", 11, "bold"),
         ).pack(side="left")
-        tk.Label(
+
+        # Editable combobox: user can pick a preset OR type any model name.
+        self.model_var = tk.StringVar(value=current_model)
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure(
+            "Agent.TCombobox",
+            fieldbackground=BG_INPUT,
+            background=BG_INPUT,
+            foreground=FG,
+            arrowcolor=FG_DIM,
+            bordercolor=BG_INPUT,
+            lightcolor=BG_INPUT,
+            darkcolor=BG_INPUT,
+        )
+        self.model_combo = ttk.Combobox(
             header,
+            textvariable=self.model_var,
+            values=self._models,
+            width=14,
+            style="Agent.TCombobox",
+            font=("Segoe UI", 9),
+        )
+        self.model_combo.pack(side="right")
+        self.model_combo.bind("<<ComboboxSelected>>", self._on_model_changed)
+        self.model_combo.bind("<Return>", self._on_model_changed)
+        self.model_combo.bind("<FocusOut>", self._on_model_changed)
+
+        hint = tk.Frame(self.root, bg=BG)
+        hint.pack(fill="x", padx=10, pady=(0, 4))
+        tk.Label(
+            hint,
             text="Ctrl+Shift+*  toggle  |  Esc cancel",
             bg=BG,
             fg=FG_DIM,
@@ -226,6 +268,18 @@ class ChatOverlay:
         self.text.configure(state="disabled")
         self.append_status("Conversation reset.")
         self.on_reset()
+
+    def _on_model_changed(self, _event=None):
+        new_model = self.model_var.get().strip()
+        if not new_model:
+            return
+        try:
+            self.on_model_change(new_model)
+            self.append_status(f"model -> {new_model}")
+        except Exception as e:
+            self.append_status(f"failed to switch model: {e}")
+        # Drop focus so subsequent typing goes to the chat input.
+        self.entry.focus_set()
 
     def _on_escape(self, _event=None):
         # ESC inside the text widget shouldn't close; only hide the overlay.

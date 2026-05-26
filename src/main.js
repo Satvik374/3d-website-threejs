@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 /* ============================================================
  * Dreamwalk — first-person Three.js explorer for the
@@ -52,7 +56,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -105,9 +109,27 @@ ground.receiveShadow = true;
 ground.name = 'fallback_ground';
 scene.add(ground);
 
-/* ----- Controls ----- */
+/* ----- Post-processing (subtle bloom for the apocalyptic glow) ----- */
+const composer = new EffectComposer(renderer);
+composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+composer.setSize(window.innerWidth, window.innerHeight);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.55, // strength
+  0.85, // radius
+  0.65, // threshold
+);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+/* ----- Atmospheric dust particles ----- */
+const dustCount = 1500;
+const dustField = makeDustField(dustCount, 80);
+scene.add(dustField);
+
+/* ----- Controls (PointerLockControls rotates the camera in place) ----- */
 const controls = new PointerLockControls(camera, renderer.domElement);
-scene.add(controls.object);
 
 /* ----- Player state ----- */
 const player = {
@@ -212,6 +234,8 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
 
 controls.addEventListener('lock', () => {
@@ -315,7 +339,7 @@ loader.load(
     // Spawn player above the model and let gravity drop them onto it.
     const spawnY = finalBounds.max.y + 5;
     player.spawn.set(0, spawnY, 0);
-    controls.object.position.copy(player.spawn);
+    camera.position.copy(player.spawn);
 
     finishLoading();
   },
@@ -363,7 +387,7 @@ function finishLoading() {
 }
 
 function respawn() {
-  controls.object.position.copy(player.spawn);
+  camera.position.copy(player.spawn);
   player.velocity.set(0, 0, 0);
 }
 
@@ -436,22 +460,22 @@ function updateMovement(dt) {
   }
 
   // Step horizontal collision: prevent walking through walls.
-  const nextPos = controls.object.position.clone();
+  const nextPos = camera.position.clone();
   nextPos.x += player.velocity.x * dt;
   nextPos.z += player.velocity.z * dt;
-  resolveHorizontalCollisions(nextPos, controls.object.position);
+  resolveHorizontalCollisions(nextPos, camera.position);
 
   // Apply vertical velocity (we'll resolve ground after).
   nextPos.y += player.velocity.y * dt;
 
-  controls.object.position.copy(nextPos);
+  camera.position.copy(nextPos);
 
   if (!player.flying) {
     resolveGround();
   }
 
   // Prevent falling forever — respawn if we drop too far.
-  if (controls.object.position.y < -200) {
+  if (camera.position.y < -200) {
     respawn();
   }
 }
@@ -482,7 +506,7 @@ function resolveHorizontalCollisions(nextPos, currentPos) {
 
 function resolveGround() {
   if (collidableMeshes.length === 0) return;
-  const origin = controls.object.position.clone();
+  const origin = camera.position.clone();
   origin.y += 0.5; // start a bit above the camera position to avoid origin-inside-mesh
   downRaycaster.set(origin, tmpDown);
   const hits = downRaycaster.intersectObjects(collidableMeshes, false);
@@ -494,8 +518,8 @@ function resolveGround() {
   const groundY = hit.point.y;
   const desiredY = groundY + PLAYER.eyeHeight;
 
-  if (controls.object.position.y <= desiredY) {
-    controls.object.position.y = desiredY;
+  if (camera.position.y <= desiredY) {
+    camera.position.y = desiredY;
     if (player.velocity.y < 0) player.velocity.y = 0;
     player.onGround = true;
   } else {
@@ -506,6 +530,71 @@ function resolveGround() {
 /* ============================================================
  * Helpers
  * ============================================================ */
+
+function makeDustField(count, radius) {
+  const positions = new Float32Array(count * 3);
+  const seeds = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    const r = Math.cbrt(Math.random()) * radius;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    positions[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.cos(phi) * 0.5 + 4;
+    positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    seeds[i] = Math.random();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('seed', new THREE.BufferAttribute(seeds, 1));
+  geo.userData.radius = radius;
+
+  const mat = new THREE.PointsMaterial({
+    color: 0xffd9b8,
+    size: 0.08,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  points.name = 'dust_field';
+  return points;
+}
+
+function updateDustField(dt, t) {
+  const positions = dustField.geometry.attributes.position;
+  const seeds = dustField.geometry.attributes.seed;
+  const radius = dustField.geometry.userData.radius;
+  const eye = camera.position;
+  for (let i = 0; i < positions.count; i++) {
+    const idx = i * 3;
+    let x = positions.array[idx];
+    let y = positions.array[idx + 1];
+    let z = positions.array[idx + 2];
+    const seed = seeds.array[i];
+
+    // Slow drift + tiny vertical bob.
+    x += dt * (0.3 + seed * 0.4);
+    y += Math.sin(t * 0.3 + seed * 6.28) * 0.0025;
+
+    // Wrap relative to the player so dust always surrounds them.
+    const dx = x - eye.x;
+    const dz = z - eye.z;
+    if (dx > radius) x -= radius * 2;
+    if (dx < -radius) x += radius * 2;
+    if (dz > radius) z -= radius * 2;
+    if (dz < -radius) z += radius * 2;
+    if (y - eye.y > radius * 0.6) y -= radius * 0.8;
+    if (y - eye.y < -radius * 0.4) y += radius * 0.8;
+
+    positions.array[idx] = x;
+    positions.array[idx + 1] = y;
+    positions.array[idx + 2] = z;
+  }
+  positions.needsUpdate = true;
+}
 
 function makeSkyTexture(topHex, bottomHex) {
   const size = 256;
@@ -533,25 +622,27 @@ const clock = new THREE.Clock();
 
 function tick() {
   const dt = Math.min(clock.getDelta(), 1 / 30);
+  const t = clock.elapsedTime;
   updateMovement(dt);
+  updateDustField(dt, t);
 
   // Track sun with player so shadows stay near the camera.
   sun.position.set(
-    controls.object.position.x + 80,
-    controls.object.position.y + 120,
-    controls.object.position.z + 60,
+    camera.position.x + 80,
+    camera.position.y + 120,
+    camera.position.z + 60,
   );
-  sun.target.position.copy(controls.object.position);
+  sun.target.position.copy(camera.position);
 
   // HUD
   if (controls.isLocked) {
     const speed = Math.hypot(player.velocity.x, player.velocity.z);
     hudSpeed.textContent = `${speed.toFixed(1)} m/s`;
-    const p = controls.object.position;
+    const p = camera.position;
     hudPos.textContent = `${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}`;
   }
 
-  renderer.render(scene, camera);
+  composer.render();
   requestAnimationFrame(tick);
 }
 
